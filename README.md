@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Create, manage, and share AI agent skills** — markdown-style skill definitions, relational storage, session-based authentication, and a discoverable public gallery.
+**Create, manage, and share AI agent skills** — markdown-style definitions, relational storage, authenticated authors, and a public discovery gallery.
 
 <p align="center">
   <a href="https://nextjs.org/" title="Next.js"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" /></a>
@@ -17,7 +17,7 @@
   <a href="https://eslint.org/" title="ESLint"><img src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint" /></a>
 </p>
 
-<sub>Stack highlights: Next.js 16, React 19, TypeScript 5, Tailwind 4 — exact ranges in <code>package.json</code>. Optional local DB: <code>docker-compose.yml</code> (PostgreSQL 16).</sub>
+<sub>Versions follow <code>package.json</code> (e.g. Next.js 16, React 19, TypeScript 5, Tailwind 4). Optional containerized PostgreSQL is described in <code>docker-compose.yml</code>.</sub>
 
 </div>
 
@@ -25,267 +25,133 @@
 
 ## Table of contents
 
-1. [Summary](#summary)
-2. [Capabilities](#capabilities)
+1. [Overview](#overview)
+2. [Functionality](#functionality)
 3. [Architecture](#architecture)
-4. [Tech stack & versions](#tech-stack--versions)
-5. [Prerequisites](#prerequisites)
-6. [Environment variables](#environment-variables)
-7. [Getting started](#getting-started)
-8. [Database & Docker](#database--docker)
-9. [Project structure](#project-structure)
-10. [Application routes](#application-routes)
-11. [HTTP API (JSON)](#http-api-json)
-12. [Data model](#data-model)
-13. [Authentication & security notes](#authentication--security-notes)
-14. [Scripts & tooling](#scripts--tooling)
-15. [Production build](#production-build)
-16. [Operational checklist](#operational-checklist)
-17. [GitHub profile README (optional)](#github-profile-readme-optional)
+4. [Tech stack](#tech-stack)
+5. [Application surface](#application-surface)
+6. [Data model](#data-model)
+7. [Scripts](#scripts)
 
 ---
 
-## Summary
+## Overview
 
-**Agent Skills Manager** is a full-stack web application for **skills**: reusable definitions (title, summary, rich body content, visibility) that authors manage from a dashboard and optionally expose in a **public gallery**. The stack centers on **Next.js (App Router)** with **React**, **TypeScript**, **Prisma**, and **PostgreSQL**, styled with **Tailwind CSS** and **DaisyUI**.
+**Agent Skills Manager** is a full-stack application for authoring **skills**: structured content (title, summary, body, visibility) stored in **PostgreSQL** and surfaced through a **Next.js** UI. Registered users maintain a **dashboard** of their skills; **public** skills appear in a shared **gallery** with attribution.
 
-| Concern | Approach |
-|--------|----------|
-| **UI** | Responsive layouts, DaisyUI components, document-level dark theme support. |
-| **Auth** | Email and password registration and login; passwords hashed with **bcryptjs**; session handled for authenticated flows. |
-| **Data** | Prisma ORM with PostgreSQL; migrations under `prisma/migrations/`. |
-| **APIs** | Route handlers under `app/api/` for JSON auth and authenticated skill reads; server actions for skill mutations where implemented. |
+| Layer | Implementation |
+|-------|----------------|
+| **Presentation** | Next.js App Router, React, Tailwind CSS, DaisyUI; responsive layout and theme-aware UI. |
+| **Authentication** | Email/password sign-up and sign-in; passwords hashed with **bcryptjs**; session-based access for protected areas. |
+| **Persistence** | Prisma ORM, PostgreSQL, migrations under `prisma/migrations/`. |
+| **Integration** | JSON **route handlers** under `app/api/` for auth and skill reads; server actions and server components for app flows. |
 
 ---
 
-## Capabilities
+## Functionality
 
-### Public & marketing
+### Public experience
 
-| Capability | Route | Description |
-|------------|-------|-------------|
-| Landing | `/` | Introductory content and entry points into the app. |
-| About | `/about` | Product and technical overview. |
-| Not found | — | App-wide **404** with navigation options. |
-| Error boundary | — | Root error UI with retry where configured. |
-
-### Public skills
-
-| Capability | Route | Description |
-|------------|-------|-------------|
-| Gallery | `/skills` | Lists **public** skills with author attribution; uses incremental static regeneration on an interval for refreshed listings. |
-| Skill detail | `/skills/[id]` | Public skill by numeric id; metadata oriented toward SEO; same regeneration strategy as the gallery. |
+| Feature | Route | Behavior |
+|---------|-------|----------|
+| Landing | `/` | Entry point and navigation into the product. |
+| About | `/about` | Product and stack orientation. |
+| Public gallery | `/skills` | Lists **public** skills with author information; public pages use incremental regeneration on a schedule. |
+| Skill detail | `/skills/[id]` | Read-only view of a **public** skill; SEO-oriented metadata. |
+| Errors | — | Centralized **404** and root **error** boundaries where configured. |
 
 ### Account
 
-| Capability | Route | Description |
-|------------|-------|-------------|
-| Login | `/login` | Session establishment; authenticated users are routed to the dashboard. |
-| Register | `/register` | Account creation with validation appropriate to the forms. |
+| Feature | Route | Behavior |
+|---------|-------|----------|
+| Registration | `/register` | Create an account with validated forms. |
+| Sign-in | `/login` | Establish a session; authenticated users are sent to the dashboard. |
 
-### Dashboard (authenticated)
+### Authenticated workspace
 
-| Capability | Route | Description |
-|------------|-------|-------------|
-| Overview | `/dashboard` | Aggregated view of **your** skills with edit/delete entry points. |
-| Create skill | `/dashboard/skills/new` | Create name, description, body, and visibility. |
-| Edit skill | `/dashboard/skills/[id]/edit` | Update a skill you own. |
+| Feature | Route | Behavior |
+|---------|-------|----------|
+| Dashboard | `/dashboard` | Overview of **your** skills with actions to edit or remove. |
+| Create skill | `/dashboard/skills/new` | Define name, description, body, and public/private visibility. |
+| Edit skill | `/dashboard/skills/[id]/edit` | Update content you own. |
 
-### Shared behavior
+### Cross-cutting behavior
 
-- Global **header / footer** for navigation and branding.
-- Client-side **auth context** for sign-in awareness across the UI.
-- **Server-side** enforcement of ownership and visibility for mutations and sensitive reads.
+- Global **navigation** (header/footer) and branding.
+- **Client-side auth awareness** for UI state; **server-side** checks for ownership and visibility on mutations and sensitive reads.
 
 ---
 
 ## Architecture
 
-Rendering mixes **static/marketing** pages, **incrementally regenerated** public skill pages, **interactive** client flows (auth, dashboard, editors), and **`/api/*` route handlers** for JSON consumers.
+The app combines **static and marketing** routes, **incrementally regenerated** public skill pages, **interactive** flows for auth and editing, and **`/api/*`** JSON endpoints.
 
 ```mermaid
 flowchart LR
-  subgraph Client
-    Browser[Browser]
-  end
-  subgraph Next["Next.js App Router"]
-    RSC[Server components & layouts]
-    RH[Route handlers /api]
-    SA[Server actions]
-  end
-  subgraph Data
-    Prisma[Prisma Client]
-    PG[(PostgreSQL)]
-  end
-  Browser --> RSC
-  Browser --> RH
-  RSC --> SA
+  Browser[Browser]
+  Next[Next.js App Router]
+  API[Route handlers /api]
+  SA[Server actions]
+  Prisma[Prisma Client]
+  PG[(PostgreSQL)]
+
+  Browser --> Next
+  Browser --> API
+  Next --> SA
   SA --> Prisma
-  RH --> Prisma
+  API --> Prisma
   Prisma --> PG
 ```
 
-Exact `revalidate` intervals and file locations live in source; treat this diagram as conceptual.
-
 ---
 
-## Tech stack & versions
+## Tech stack
 
-Pinned versions below mirror **`package.json`** at the time of documentation; upgrade deliberately and re-run tests.
+Dependency ranges are defined in **`package.json`**; upgrade with regression testing.
 
-### Runtime & framework
+### Core platform
 
-| Technology | Version (semver range) | Role |
-|------------|-------------------------|------|
-| **Node.js** | LTS recommended | JavaScript runtime. |
-| **Next.js** | `^16.2.4` | App Router, server components, metadata, route handlers. |
-| **React** / **React DOM** | `^19.2.4` | UI layer. |
-| **TypeScript** | `^5` | Static typing. |
+| Technology | Range | Role |
+|------------|-------|------|
+| **Next.js** | `^16.2.4` | App Router, React Server Components, metadata, API routes. |
+| **React** / **React DOM** | `^19.2.4` | UI rendering. |
+| **TypeScript** | `^5` | Type-safe application code. |
+| **Node.js** | LTS recommended | Execution environment. |
 
-### Data & infrastructure
+### Data & security
 
 | Package | Role |
 |---------|------|
-| **prisma** / **@prisma/client** | Schema, migrations, type-safe queries. |
-| **pg** / **@prisma/adapter-pg** | PostgreSQL driver and Prisma adapter usage. |
-| **bcryptjs** | Password hashing. |
+| **prisma** / **@prisma/client** | Schema, migrations, typed database access. |
+| **pg** / **@prisma/adapter-pg** | PostgreSQL connectivity via Prisma’s driver adapter. |
+| **bcryptjs** | Password hashing and verification. |
 
 ### UI & styling
 
 | Package | Role |
 |---------|------|
-| **tailwindcss** / **@tailwindcss/postcss** | Utility-first CSS (v4 pipeline). |
-| **daisyui** | Component primitives and themes. |
+| **tailwindcss** / **@tailwindcss/postcss** | Utility-first styling (Tailwind v4 toolchain). |
+| **daisyui** | Component library and themes. |
 
-### Quality
+### Developer experience
 
 | Package | Role |
 |---------|------|
-| **eslint** / **eslint-config-next** | Linting aligned with Next.js. |
-| **dotenv** | Loading `.env` for supported tooling (never commit secrets). |
-| **@types/\*** | Type definitions for Node, React, `pg`. |
+| **eslint** / **eslint-config-next** | Linting consistent with Next.js. |
+| **dotenv** | Environment loading for supported tooling. |
+| **@types/\*** | Type definitions for Node, React, and PostgreSQL client types. |
 
-### Optional local infrastructure
+### Optional infrastructure
 
 | Tool | Role |
 |------|------|
-| **Docker Compose** | One-service definition for **PostgreSQL 16** (`docker-compose.yml`). |
+| **Docker Compose** | Optional local **PostgreSQL 16** service (`docker-compose.yml`) for development convenience. |
 
 ---
 
-## Prerequisites
+## Application surface
 
-- **Node.js** (use an active **LTS** release compatible with Next.js 16).
-- **npm** (or another package manager; examples use **npm**).
-- **PostgreSQL** reachable via a connection string, **or** Docker / Docker Compose to run the bundled Postgres service.
-
----
-
-## Environment variables
-
-Configure secrets outside version control (`.env` is gitignored; do not commit real credentials).
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| **`DATABASE_URL`** | Yes | PostgreSQL connection URL consumed by Prisma (`schema.prisma` `datasource db`). |
-
-Additional variables may appear as the app evolves; inspect Prisma config and application code for any extensions.
-
-**Example shape** (replace host, credentials, and database name with yours):
-
-```bash
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE"
-```
-
-For the **default Docker Compose** stack in this repo (development defaults):
-
-```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/skills_db"
-```
-
----
-
-## Getting started
-
-1. **Clone** the repository and open the project root:
-
-   ```bash
-   cd agent-skills-manager
-   ```
-
-2. **Install dependencies:**
-
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment** — create `.env` (or use your host’s secret store) and set **`DATABASE_URL`**.
-
-4. **Prepare the database** — generate the client and apply migrations:
-
-   ```bash
-   npx prisma generate
-   npx prisma migrate dev
-   ```
-
-5. **Run the development server:**
-
-   ```bash
-   npm run dev
-   ```
-
-6. Open the app at the URL printed in the terminal (commonly `http://localhost:3000`).
-
----
-
-## Database & Docker
-
-The Compose file defines a single service **`skills-db`**:
-
-| Setting | Value |
-|---------|--------|
-| Image | `postgres:16` |
-| Default database | `skills_db` |
-| Port mapping | `5432:5432` |
-| Default user / password (compose env) | `postgres` / `postgres` |
-| Volume | Named volume `skills_pgdata` for data persistence |
-| Healthcheck | `pg_isready` |
-
-**Start only the database:**
-
-```bash
-docker compose up -d
-```
-
-Stop and remove containers when finished if desired (`docker compose down`). Use production-grade credentials and networking outside local experimentation.
-
----
-
-## Project structure
-
-```
-agent-skills-manager/
-├── app/                    # Next.js App Router: pages, layouts, components, server actions, api/
-├── prisma/
-│   ├── schema.prisma       # Data models & datasource
-│   └── migrations/         # SQL migrations
-├── public/                 # Static assets
-├── next.config.ts
-├── tsconfig.json           # Path alias @/* → ./app/*
-├── eslint.config.mjs
-├── postcss.config.mjs
-├── prisma.config.ts
-├── docker-compose.yml      # Optional local PostgreSQL
-├── package.json
-├── PROFILE_README.md       # Optional template for GitHub profile README
-└── README.md               # This file
-```
-
-**Import alias:** `@/` maps to `./app/` (see `tsconfig.json`).
-
----
-
-## Application routes
+### Pages (selection)
 
 | Area | Routes |
 |------|--------|
@@ -294,106 +160,56 @@ agent-skills-manager/
 | Public skills | `/skills`, `/skills/[id]` |
 | Dashboard | `/dashboard`, `/dashboard/skills/new`, `/dashboard/skills/[id]/edit` |
 
----
-
-## HTTP API (JSON)
-
-REST-style handlers live under **`app/api/`**. Current surface:
+### HTTP API (`app/api`)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/auth/register` | Register a new user. |
+| `POST` | `/api/auth/register` | Register a user. |
 | `POST` | `/api/auth/login` | Sign in. |
 | `POST` | `/api/auth/logout` | Sign out. |
-| `GET` | `/api/auth/me` | Current session / user context. |
-| `GET` | `/api/skills` | Authenticated listing of skills (per handler logic). |
-| `GET` | `/api/skills/[id]` | Fetch a skill by id when permitted. |
+| `GET` | `/api/auth/me` | Current session context. |
+| `GET` | `/api/skills` | Authenticated skill listing (per handler rules). |
+| `GET` | `/api/skills/[id]` | Fetch one skill when permitted. |
 
-Request bodies, status codes, and error shapes are defined in the corresponding **`route.ts`** files. Treat this table as a map to source, not a substitute for reading handlers when integrating clients.
+Request and response contracts are implemented in the corresponding **`route.ts`** files.
+
+### Repository layout (conceptual)
+
+| Path | Contents |
+|------|----------|
+| `app/` | Routes, layouts, UI, server actions, API handlers. |
+| `prisma/` | `schema.prisma` and SQL migrations. |
+| `public/` | Static assets. |
+
+TypeScript path alias **`@/`** resolves to **`./app/`**.
 
 ---
 
 ## Data model
 
-Defined in **`prisma/schema.prisma`** (PostgreSQL).
+Source of truth: **`prisma/schema.prisma`** (PostgreSQL).
 
-### `User` (`users`)
+**User (`users`)** — `id`, unique `email`, hashed `password`, `name`, timestamps; relates to many **Skill** records.
 
-| Field | Notes |
-|-------|--------|
-| `id` | Primary key, autoincrement. |
-| `email` | Unique. |
-| `password` | Stored hashed (never plaintext in application logic). |
-| `name` | Display name. |
-| `createdAt` / `updatedAt` | Timestamps. |
-| `skills` | One-to-many relation to `Skill`. |
-
-### `Skill` (`skills`)
-
-| Field | Notes |
-|-------|--------|
-| `id` | Primary key, autoincrement. |
-| `name` | Short title (max length per schema). |
-| `description` | Summary (bounded length). |
-| `content` | Body text (large text). |
-| `isPublic` | Whether the skill appears in the public gallery. |
-| `authorId` | Foreign key to `User`; cascade delete from author. |
-| `createdAt` / `updatedAt` | Timestamps. |
+**Skill (`skills`)** — `id`, `name`, `description`, `content`, `isPublic`, `authorId` → `User`, timestamps; deleting an author removes their skills (`onDelete: Cascade`).
 
 ---
 
-## Authentication & security notes
+## Scripts
 
-- **Passwords** are hashed before persistence; never log or return raw passwords from APIs.
-- **Sessions** are suitable for development-style flows; **production** deployments should adopt your organization’s standards (cookie flags, HTTPS, session storage, rotation, monitoring).
-- **Authorization** for dashboard and API routes must be enforced **on the server** (server actions and route handlers), not only by hiding UI controls.
-
----
-
-## Scripts & tooling
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the Next.js development server. |
-| `npm run build` | Create an optimized production build. |
-| `npm run start` | Serve the production build. |
-| `npm run lint` | Run ESLint. |
+| Command | Use |
+|---------|-----|
+| `npm run dev` | Development server. |
+| `npm run build` | Production build. |
+| `npm run start` | Run production build. |
+| `npm run lint` | ESLint. |
 | `npx prisma generate` | Regenerate Prisma Client after schema changes. |
-| `npx prisma migrate dev` | Apply migrations in development. |
-| `npx prisma studio` | Open Prisma Studio (development inspection only). |
-
----
-
-## Production build
-
-1. Set **`DATABASE_URL`** (and any other required variables) in the deployment environment.
-2. Run **`npm run build`**.
-3. Start with **`npm run start`** (or your platform’s equivalent for Node apps).
-
-Use managed PostgreSQL, secret managers, and HTTPS termination appropriate to your host.
-
----
-
-## Operational checklist
-
-- Store **database URLs** and **secrets** only in secure configuration (never in the repo).
-- Prefer **HTTPS** and conservative **cookie** policies in production.
-- Run **migrations** as part of deployment when the schema changes.
-- Review **authorization** paths whenever new routes or actions are added.
-
----
-
-## GitHub profile README (optional)
-
-GitHub shows one **primary language** per repository; to present a **full stack** on your profile, maintain a profile repository (often **`username/username`**) with a root **`README.md`**.
-
-This repository includes **`PROFILE_README.md`** as a starting point—copy and adapt it for your profile, then adjust badges and pinned repositories to match your projects.
+| `npx prisma migrate dev` | Apply migrations (development). |
 
 ---
 
 <div align="center">
 
-**Agent Skills Manager** — documentation for contributors and operators.  
-For organization-specific deployment and secrets, use private runbooks and secret stores.
+<strong>Agent Skills Manager</strong> — tech stack and product behavior for contributors.
 
 </div>
