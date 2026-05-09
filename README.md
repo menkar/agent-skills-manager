@@ -6,6 +6,23 @@
 
 Built with **Next.js (App Router)**, **React**, **Prisma**, **PostgreSQL**, **Tailwind CSS**, and **DaisyUI**.
 
+### Tech stack at a glance
+
+<p align="center">
+  <a href="https://nextjs.org/" title="Next.js"><img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" /></a>
+  <a href="https://react.dev/" title="React"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" /></a>
+  <a href="https://www.typescriptlang.org/" title="TypeScript"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://tailwindcss.com/" title="Tailwind CSS"><img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
+  <a href="https://daisyui.com/" title="DaisyUI"><img src="https://img.shields.io/badge/DaisyUI-5A0EF8?style=for-the-badge&logo=daisyui&logoColor=white" alt="DaisyUI" /></a>
+  <a href="https://www.prisma.io/" title="Prisma"><img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" /></a>
+  <a href="https://www.postgresql.org/" title="PostgreSQL"><img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
+  <a href="https://nodejs.org/" title="Node.js"><img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" /></a>
+  <a href="https://www.docker.com/" title="Docker"><img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" /></a>
+  <a href="https://eslint.org/" title="ESLint"><img src="https://img.shields.io/badge/ESLint-4B32C3?style=for-the-badge&logo=eslint&logoColor=white" alt="ESLint" /></a>
+</p>
+
+<p align="center"><sub>Runtime, versions, and dependency pins are defined in <code>package.json</code>; local PostgreSQL is optional via <code>docker-compose.yml</code> (Postgres 16).</sub></p>
+
 </div>
 
 ---
@@ -22,6 +39,7 @@ Built with **Next.js (App Router)**, **React**, **Prisma**, **PostgreSQL**, **Ta
 8. [Authentication (conceptual)](#authentication-conceptual)
 9. [Operational notes](#operational-notes)
 10. [Scripts](#scripts)
+11. [GitHub profile README](#github-profile-readme)
 
 ---
 
@@ -112,6 +130,13 @@ Versions follow **`package.json`** in this repository.
 | **daisyui** | Pre-built UI patterns (buttons, cards, forms, navigation). |
 | **tailwindcss** (with PostCSS) | Utility-first styling. |
 
+### Infrastructure & local development
+
+| Tool | Purpose |
+|------|---------|
+| **Docker Compose** | Optional local **PostgreSQL 16** (`docker-compose.yml`); not required for app logic but matches typical dev setup. |
+| **PostgreSQL** | Primary datastore; accessed via Prisma and `pg` / `@prisma/adapter-pg`. |
+
 ### Development dependencies (summary)
 
 | Package | Purpose |
@@ -184,6 +209,14 @@ REST-style JSON endpoints exist for **authentication** (login, register, logout,
 | `npx prisma studio` | Optional database browser (development only). |
 
 Docker Compose commands (`docker compose up`, etc.) depend on whether you use containerized PostgreSQL; follow your team’s runbooks.
+
+---
+
+## GitHub profile README
+
+To show a **full tech stack on your GitHub profile** (not only this repo’s primary language), create a repository named **`menkar/menkar`** and add a root **`README.md`**.
+
+This repository includes **`PROFILE_README.md`** — copy its contents into that profile repo’s `README.md`, then adjust links and pinned repos as you like. Your profile page will render that file above your contribution graph and pinned repositories.
 
 ---
 
