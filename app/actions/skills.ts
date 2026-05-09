@@ -1,7 +1,9 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 interface SkillFormData {
   name: string;
@@ -14,6 +16,46 @@ interface ActionResult {
   success: boolean;
   error?: string;
   skillId?: number;
+}
+
+/** Form state for `useActionState` on the public create-skill page */
+export type CreateSkillFormState = {
+  message: string;
+};
+
+/**
+ * Server action compatible with React `useActionState(previousState, formData)`.
+ * Resolves the author from the session cookie and delegates to {@link createSkill}.
+ */
+export async function createSkillFromForm(
+  _prevState: CreateSkillFormState,
+  formData: FormData
+): Promise<CreateSkillFormState> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { message: "You must be signed in to create a skill." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const content = String(formData.get("content") ?? "").trim();
+  const isPublic =
+    formData.get("isPublic") === "on" || formData.get("isPublic") === "true";
+
+  if (!name || !description || !content) {
+    return { message: "All fields are required." };
+  }
+
+  const result = await createSkill(
+    { name, description, content, isPublic },
+    user.userId
+  );
+
+  if (result.success && result.skillId != null) {
+    redirect("/dashboard");
+  }
+
+  return { message: result.error ?? "Failed to create skill." };
 }
 
 export async function createSkill(
